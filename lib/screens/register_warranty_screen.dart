@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/warranty.dart';
 import '../services/warranty_service.dart';
+import '../services/blockchain_service.dart';
 
 class RegisterWarrantyScreen extends StatefulWidget {
   @override
@@ -9,6 +10,7 @@ class RegisterWarrantyScreen extends StatefulWidget {
 }
 
 class _RegisterWarrantyScreenState extends State<RegisterWarrantyScreen> {
+  final BlockchainService blockchain = BlockchainService();
   final _formKey = GlobalKey<FormState>();
   final _productIdController = TextEditingController();
   final _productNameController = TextEditingController();
@@ -150,7 +152,7 @@ class _RegisterWarrantyScreenState extends State<RegisterWarrantyScreen> {
     );
   }
 
-  void _submitForm() {
+  Future<void> _submitForm() async {
     if (_formKey.currentState!.validate() && _purchaseDate != null) {
       final warranty = Warranty(
         productId: _productIdController.text,
@@ -161,6 +163,14 @@ class _RegisterWarrantyScreenState extends State<RegisterWarrantyScreen> {
       );
 
       WarrantyService().registerWarranty(warranty);
+
+      await blockchain.registerWarranty(
+        warranty.productId,
+        warranty.productName,
+        warranty.customerName,
+        warranty.purchaseDate.millisecondsSinceEpoch,
+        warranty.warrantyPeriodMonths,
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Warranty registered successfully!')),
