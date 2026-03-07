@@ -3,11 +3,8 @@ import 'package:web3dart/web3dart.dart';
 import 'package:http/http.dart';
 
 class BlockchainService {
-
-  final String rpcUrl = "http://127.0.0.1:7545";
-
+  final String rpcUrl = "http://192.168.1.174:7545";
   final String privateKey = "27144e6c7a328289ce03404e1bdca6fe46b6cf4ecbcc510cf3f7885d244084ff";
-
   final String contractAddress = "0xc20D1605CA848dDe610f6Ed3eEE62F91E9731A4F";
 
   final String abi = '''
@@ -133,62 +130,90 @@ class BlockchainService {
 
   late Web3Client client;
   late Credentials credentials;
-
   late DeployedContract contract;
   late ContractFunction registerWarrantyFunction;
   late ContractFunction checkWarrantyFunction;
 
   BlockchainService() {
-  client = Web3Client(rpcUrl, Client());
-  credentials = EthPrivateKey.fromHex(privateKey);
+    client = Web3Client(rpcUrl, Client());
+    credentials = EthPrivateKey.fromHex(privateKey);
+    final contractAddr = EthereumAddress.fromHex(contractAddress);
+    contract = DeployedContract(
+      ContractAbi.fromJson(abi, "WarrantyRegistry"),
+      contractAddr,
+    );
+    registerWarrantyFunction = contract.function("registerWarranty");
+    checkWarrantyFunction = contract.function("checkWarranty");
+    _testConnection();
+  }
 
-  final contractAddr = EthereumAddress.fromHex(contractAddress);
+  Future<void> _testConnection() async {
+    try {
+      final chainId = await client.getNetworkId();
+      print('✅ Connected to Ganache - Chain ID: $chainId');
+    } catch (e) {
+      print('❌ Connection error: $e');
+    }
+  }
 
-  contract = DeployedContract(
-    ContractAbi.fromJson(abi, "WarrantyRegistry"),
-    contractAddr,
-  );
+  Future<String> registerWarranty(
+    String productId,
+    String productName,
+    String customerName,
+    int purchaseDate,
+    int warrantyPeriod,
+  ) async {
+    print('🔗 Registering warranty...');
+    print('Product ID: $productId');
+    
+    try {
+      final sender = await credentials.extractAddress();
+      print('Sender address: $sender');
+      
+      // Get nonce
+      final nonce = await client.getTransactionCount(sender);
+      print('Nonce: $nonce');
+      
+      final transaction = Transaction.callContract(
+        contract: contract,
+        function: registerWarrantyFunction,
+        parameters: [
+          productId,
+          productName,
+          customerName,
+          BigInt.from(purchaseDate),
+          BigInt.from(warrantyPeriod)
+        ],
+        maxGas: 3000000,
+        gasPrice: EtherAmount.fromUnitAndValue(EtherUnit.gwei, 20),
+        nonce: nonce,
+      );
 
-  registerWarrantyFunction = contract.function("registerWarranty");
-  checkWarrantyFunction = contract.function("checkWarranty");
-}
+      final result = await client.sendTransaction(
+        credentials,
+        transaction,
+        chainId: 1337,
+      );
 
-Future<String> registerWarranty(
-  String productId,
-  String productName,
-  String customerName,
-  int purchaseDate,
-  int warrantyPeriod,
-) async {
+      print('✅ Transaction hash: $result');
+      return result;
+    } catch (e) {
+      print('❌ Error: $e');
+      rethrow;
+    }
+  }
 
-  final transaction = Transaction.callContract(
-    contract: contract,
-    function: registerWarrantyFunction,
-    parameters: [
-      productId,
-      productName,
-      customerName,
-      BigInt.from(purchaseDate),
-      BigInt.from(warrantyPeriod)
-    ],
-  );
+  Future<List<dynamic>> checkWarranty(String productId) async {
+    print('🔍 Checking warranty...');
+    print('Product ID: $productId');
+    
+    final result = await client.call(
+      contract: contract,
+      function: checkWarrantyFunction,
+      params: [productId],
+    );
 
-  final result = await client.sendTransaction(
-    credentials,
-    transaction,
-    chainId: 1337,
-  );
-
-  return result;
-}
-
-Future<List<dynamic>> checkWarranty(String productId) async {
-
-  final result = await client.call(
-    contract: contract,
-    function: checkWarrantyFunction,
-    params: [productId],
-  );
-
-  return result;
+    print('📋 Result: $result');
+    return result;
+  }
 }

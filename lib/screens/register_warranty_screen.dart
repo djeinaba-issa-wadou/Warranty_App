@@ -17,6 +17,7 @@ class _RegisterWarrantyScreenState extends State<RegisterWarrantyScreen> {
   final _customerNameController = TextEditingController();
   DateTime? _purchaseDate;
   int? _warrantyPeriod;
+  bool _isLoading = false;
 
   final List<Map<String, dynamic>> _warrantyPeriods = [
     {'label': '6 Months', 'value': 6},
@@ -50,7 +51,7 @@ class _RegisterWarrantyScreenState extends State<RegisterWarrantyScreen> {
               _buildDropdown(),
               SizedBox(height: 32),
               ElevatedButton(
-                onPressed: _submitForm,
+                onPressed: _isLoading ? null : _submitForm,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue[700],
                   padding: EdgeInsets.symmetric(vertical: 16),
@@ -58,10 +59,19 @@ class _RegisterWarrantyScreenState extends State<RegisterWarrantyScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: Text(
-                  'Submit',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
-                ),
+                child: _isLoading
+                    ? SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'Submit',
+                        style: TextStyle(fontSize: 18, color: Colors.white),
+                      ),
               ),
             ],
           ),
@@ -154,29 +164,38 @@ class _RegisterWarrantyScreenState extends State<RegisterWarrantyScreen> {
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate() && _purchaseDate != null) {
-      final warranty = Warranty(
-        productId: _productIdController.text,
-        productName: _productNameController.text,
-        customerName: _customerNameController.text,
-        purchaseDate: _purchaseDate!,
-        warrantyPeriodMonths: _warrantyPeriod!,
-      );
-
-      WarrantyService().registerWarranty(warranty);
-
-      await blockchain.registerWarranty(
-        warranty.productId,
-        warranty.productName,
-        warranty.customerName,
-        warranty.purchaseDate.millisecondsSinceEpoch,
-        warranty.warrantyPeriodMonths,
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Warranty registered successfully!')),
-      );
-
-      Navigator.pop(context);
+      setState(() => _isLoading = true);
+      try {
+        final warranty = Warranty(
+          productId: _productIdController.text,
+          productName: _productNameController.text,
+          customerName: _customerNameController.text,
+          purchaseDate: _purchaseDate!,
+          warrantyPeriodMonths: _warrantyPeriod!,
+        );
+        WarrantyService().registerWarranty(warranty);
+        await blockchain.registerWarranty(
+          warranty.productId,
+          warranty.productName,
+          warranty.customerName,
+          warranty.purchaseDate.millisecondsSinceEpoch,
+          warranty.warrantyPeriodMonths,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Warranty registered successfully!')),
+          );
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${e.toString()}')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
     } else if (_purchaseDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please select a purchase date')),
