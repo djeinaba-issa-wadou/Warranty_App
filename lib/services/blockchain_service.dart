@@ -3,9 +3,12 @@ import 'package:web3dart/web3dart.dart';
 import 'package:http/http.dart';
 
 class BlockchainService {
-  final String rpcUrl = "http://192.168.1.174:7545";
-  final String privateKey = "27144e6c7a328289ce03404e1bdca6fe46b6cf4ecbcc510cf3f7885d244084ff";
-  final String contractAddress = "0xc20D1605CA848dDe610f6Ed3eEE62F91E9731A4F";
+  // Values come from config.json at build time (never committed to Git):
+  //   flutter run --dart-define-from-file=config.json
+  // See config.example.json for the keys needed.
+  static const String rpcUrl = String.fromEnvironment('RPC_URL');
+  static const String privateKey = String.fromEnvironment('PRIVATE_KEY');
+  static const String contractAddress = String.fromEnvironment('CONTRACT_ADDRESS');
 
   final String abi = '''
   [
@@ -135,6 +138,12 @@ class BlockchainService {
   late ContractFunction checkWarrantyFunction;
 
   BlockchainService() {
+    if (rpcUrl.isEmpty || privateKey.isEmpty || contractAddress.isEmpty) {
+      throw StateError(
+        'Missing blockchain config. Run the app with '
+        '--dart-define-from-file=config.json (see config.example.json).',
+      );
+    }
     client = Web3Client(rpcUrl, Client());
     credentials = EthPrivateKey.fromHex(privateKey);
     final contractAddr = EthereumAddress.fromHex(contractAddress);
