@@ -4,6 +4,16 @@ A cross-platform Flutter app that stores product warranties on an Ethereum block
 
 Paper warranty cards get lost, and shop records can be edited or disputed. This app gives sellers and customers one shared, permanent record: a seller registers the warranty at the point of sale, and the customer can check its status at any time.
 
+## Screenshots
+
+| Choose a role | Seller login | Seller home |
+|---|---|---|
+| <img src="screenshots/role-selection.png" width="260" alt="Role selection screen"> | <img src="screenshots/seller-login.png" width="260" alt="Seller login screen"> | <img src="screenshots/seller-home.png" width="260" alt="Seller home screen"> |
+
+| Customer login | Check a warranty |
+|---|---|
+| <img src="screenshots/customer-login.png" width="260" alt="Customer login screen"> | <img src="screenshots/check-warranty.png" width="260" alt="Warranty check showing a valid warranty"> |
+
 ## Features
 
 - **Two roles:** separate seller and customer flows from a role-selection screen.
